@@ -31,7 +31,7 @@ router = APIRouter(
     response_model=StreamingEventsResponse,
     summary="Get streaming payment events",
     responses={
-        500: {"description": "Streaming data file unavailable"},
+        500: {"description": "Streaming analytics data unavailable"},
     },
 )
 def read_streaming_events_endpoint(
@@ -114,7 +114,7 @@ def read_streaming_events_endpoint(
     response_model=StreamingSummaryResponse,
     summary="Get streaming payment summary",
     responses={
-        500: {"description": "Streaming data file unavailable"},
+        500: {"description": "Streaming analytics data unavailable"},
     },
 )
 def read_streaming_summary_endpoint(
@@ -154,7 +154,7 @@ def read_streaming_summary_endpoint(
     response_model=StreamingDepartmentSummaryResponse,
     summary="Get streaming summary by department",
     responses={
-        500: {"description": "Streaming data file unavailable"},
+        500: {"description": "Streaming analytics data unavailable"},
     },
 )
 def read_streaming_department_summary_endpoint(
@@ -223,7 +223,7 @@ def read_streaming_department_summary_endpoint(
     response_model=StreamingSupplierSummaryResponse,
     summary="Get streaming summary by supplier",
     responses={
-        500: {"description": "Streaming data file unavailable"},
+        500: {"description": "Streaming analytics data unavailable"},
     },
 )
 def read_streaming_supplier_summary_endpoint(

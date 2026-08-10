@@ -11,11 +11,9 @@ from app.models.streaming import (
 )
 
 from app.repositories.streaming_repository import (
-    read_streaming_department_summary,
     read_streaming_events,
     read_streaming_summary,
 )
-
 def get_streaming_events(
     *,
     fiscal_year: int | None = None,
@@ -92,26 +90,6 @@ def get_streaming_department_summary(
     limit: int = 100,
     offset: int = 0,
 ) -> StreamingDepartmentSummaryResponse:
-
-    if fiscal_year is None and not department:
-        summary = read_streaming_department_summary()
-        raw_items = summary.get("data", [])
-
-        items = [
-            StreamingDepartmentSummaryItem(**item)
-            for item in raw_items
-        ]
-
-        total_count = len(items)
-        paginated_items = items[offset : offset + limit]
-
-        return StreamingDepartmentSummaryResponse(
-            total_count=total_count,
-            count=len(paginated_items),
-            limit=limit,
-            offset=offset,
-            data=paginated_items,
-        )
 
     events = read_streaming_events()
 

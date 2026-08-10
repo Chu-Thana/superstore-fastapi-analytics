@@ -1,47 +1,75 @@
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
+load_dotenv(
+    PROJECT_ROOT / ".env"
+)
+
 DATA_DIR = PROJECT_ROOT / "data"
-BATCH_DATA_DIR = DATA_DIR / "batch"
 
-SPENDING_BY_FISCAL_YEAR_FILE = (
-    BATCH_DATA_DIR / "mart_spending_by_fiscal_year.csv"
+
+S3_BUCKET = os.getenv(
+    "S3_BUCKET",
+    "your-s3-bucket-name",
 )
 
-SPENDING_BY_DEPARTMENT_FILE = (
-    BATCH_DATA_DIR / "mart_spending_by_department.csv"
+S3_PREFIX = os.getenv(
+    "S3_PREFIX",
+    "data-platform/vendor-payments",
 )
 
-TOP_SUPPLIERS_FILE = (
-    BATCH_DATA_DIR / "mart_spending_by_supplier_top_n.csv"
+AWS_REGION = os.getenv(
+    "AWS_REGION",
+    "ap-southeast-1",
 )
 
-PENDING_BY_DEPARTMENT_FILE = (
-    BATCH_DATA_DIR / "mart_pending_by_department.csv"
+def build_batch_gold_s3_key(file_name: str) -> str:
+    table_name = Path(file_name).stem
+
+    return (
+        f"{S3_PREFIX}/gold/full/"
+        f"{table_name}/{file_name}"
+    )
+
+
+SPENDING_BY_FISCAL_YEAR_S3_KEY = build_batch_gold_s3_key(
+    "mart_spending_by_fiscal_year.csv"
 )
 
-FUND_CATEGORY_SUMMARY_FILE = (
-    BATCH_DATA_DIR / "mart_fund_category_summary.csv"
+SPENDING_BY_DEPARTMENT_S3_KEY = build_batch_gold_s3_key(
+    "mart_spending_by_department.csv"
 )
 
-STREAMING_SAMPLE_FILE = (
-    DATA_DIR
-    / "streaming"
-    / "vendor_payments_streaming_sample.jsonl"
+TOP_SUPPLIERS_S3_KEY = build_batch_gold_s3_key(
+    "mart_spending_by_supplier_top_n.csv"
 )
 
-STREAMING_SUMMARY_FILE = (
-    DATA_DIR
-    / "streaming"
-    / "vendor_payments_streaming_summary.json"
+PENDING_BY_DEPARTMENT_S3_KEY = build_batch_gold_s3_key(
+    "mart_pending_by_department.csv"
 )
 
-STREAMING_DEPARTMENT_SUMMARY_FILE = (
-    DATA_DIR
-    / "streaming"
-    / "vendor_payments_streaming_department_summary.json"
+FUND_CATEGORY_SUMMARY_S3_KEY = build_batch_gold_s3_key(
+    "mart_fund_category_summary.csv"
 )
 
-API_CACHE_TTL_SECONDS = 60.0
+STREAMING_CURATED_S3_KEY = (
+    f"{S3_PREFIX}/streaming/curated/"
+    "vendor_payments_streaming_events.csv"
+)
+
+STREAMING_SUMMARY_S3_KEY = (
+    f"{S3_PREFIX}/streaming/reports/"
+    "streaming_summary_report.json"
+)
+
+API_CACHE_TTL_SECONDS = float(
+    os.getenv(
+        "CACHE_TTL_SECONDS",
+        "60",
+    )
+)

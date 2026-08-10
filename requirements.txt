@@ -4,3 +4,5 @@ pydantic==2.12.5
 httpx2==2.4.0
 pytest==9.0.3
 ruff==0.15.17
+boto3
+python-dotenv

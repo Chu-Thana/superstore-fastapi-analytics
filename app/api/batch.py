@@ -30,7 +30,7 @@ router = APIRouter(
     response_model=SpendingByFiscalYearResponse,
     summary="Get spending summary by fiscal year",
     responses={
-        500: {"description": "Batch data file unavailable"},
+        500: {"description": "Batch analytics data unavailable"},
     },
 )
 def read_spending_by_fiscal_year(
@@ -70,7 +70,7 @@ def read_spending_by_fiscal_year(
     response_model=SpendingByDepartmentResponse,
     summary="Get spending summary by department",
     responses={
-        500: {"description": "Batch data file unavailable"},
+        500: {"description": "Batch analytics data unavailable"},
     },
 )
 def read_spending_by_department_endpoint(
@@ -139,7 +139,7 @@ def read_spending_by_department_endpoint(
     response_model=TopSuppliersResponse,
     summary="Get top suppliers",
     responses={
-        500: {"description": "Batch data file unavailable"},
+        500: {"description": "Batch analytics data unavailable"},
     },
 )
 def read_top_suppliers_endpoint(
@@ -202,7 +202,7 @@ def read_top_suppliers_endpoint(
     response_model=PendingByDepartmentResponse,
     summary="Get pending payment summary by department",
     responses={
-        500: {"description": "Batch data file unavailable"},
+        500: {"description": "Batch analytics data unavailable"},
     },
 )
 def read_pending_by_department_endpoint(
@@ -271,7 +271,7 @@ def read_pending_by_department_endpoint(
     response_model=FundCategorySummaryResponse,
     summary="Get fund category summary",
     responses={
-        500: {"description": "Batch data file unavailable"},
+        500: {"description": "Batch analytics data unavailable"},
     },
 )
 def read_fund_category_summary_endpoint(
