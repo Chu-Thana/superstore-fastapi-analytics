@@ -3,11 +3,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+
     container_name: vendor-payments-api
+
     ports:
       - "8000:8000"
+
+    env_file:
+      - .env
+
     environment:
       PORT: 8000
+
     volumes:
-      - E:/dev/vendor-payments-streaming-pipeline/output/staging/vendor_payments_streaming_staging.jsonl:/app/data/streaming/vendor_payments_streaming_sample.jsonl:ro
+      - ${USERPROFILE}/.aws:/root/.aws:ro
+
     restart: unless-stopped

@@ -18,8 +18,8 @@ def get_metadata() -> MetadataResponse:
     return MetadataResponse(
         service="Vendor Payments API",
         version="1.0.0",
-        batch_data_available=True,
-        streaming_data_available=True,
+        batch_analytics_enabled=True,
+        streaming_analytics_enabled=True,
         middleware_enabled=True,
         request_id_enabled=True,
         request_timing_enabled=True,
