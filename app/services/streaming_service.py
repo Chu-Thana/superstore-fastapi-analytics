@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.models.streaming import (
+    StreamingDedupCount,
     StreamingDepartmentSummaryItem,
     StreamingDepartmentSummaryResponse,
     StreamingEventItem,
@@ -8,12 +9,14 @@ from app.models.streaming import (
     StreamingSummaryResponse,
     StreamingSupplierSummaryItem,
     StreamingSupplierSummaryResponse,
+    StreamingYearCount,
 )
 
 from app.repositories.streaming_repository import (
     read_streaming_events,
-    read_streaming_summary,
 )
+
+
 def get_streaming_events(
     *,
     fiscal_year: int | None = None,
@@ -79,9 +82,100 @@ def get_streaming_events(
     )
 
 def get_streaming_summary() -> StreamingSummaryResponse:
-    summary = read_streaming_summary()
+    events = read_streaming_events()
 
-    return StreamingSummaryResponse(**summary)
+    if not events:
+        raise ValueError(
+            "Streaming events are empty."
+        )
+
+    total_events = len(events)
+
+    total_payment_amount = sum(
+        event["payment_amount"]
+        for event in events
+    )
+
+    unique_departments = len(
+        {
+            event["department"]
+            for event in events
+        }
+    )
+
+    unique_suppliers = len(
+        {
+            event["supplier_name"]
+            for event in events
+        }
+    )
+
+    fiscal_years = [
+        event["fiscal_year"]
+        for event in events
+    ]
+
+    minimum_fiscal_year = min(fiscal_years)
+    maximum_fiscal_year = max(fiscal_years)
+
+    events_by_fiscal_year_map: dict[int, int] = {}
+
+    for event in events:
+        fiscal_year = int(event["fiscal_year"])
+
+        events_by_fiscal_year_map[fiscal_year] = (
+                events_by_fiscal_year_map.get(
+                    fiscal_year,
+                    0,
+                )
+                + 1
+        )
+
+    events_by_fiscal_year = [
+        StreamingYearCount(
+            fiscal_year=fiscal_year,
+            event_count=event_count,
+        )
+        for fiscal_year, event_count
+        in sorted(events_by_fiscal_year_map.items())
+    ]
+
+    events_by_dedup_status_map: dict[str, int] = {}
+
+    for event in events:
+        dedup_status = str(event["dedup_status"])
+
+        events_by_dedup_status_map[dedup_status] = (
+                events_by_dedup_status_map.get(
+                    dedup_status,
+                    0,
+                )
+                + 1
+        )
+
+    events_by_dedup_status = [
+        StreamingDedupCount(
+            dedup_status=dedup_status,
+            event_count=event_count,
+        )
+        for dedup_status, event_count
+        in sorted(events_by_dedup_status_map.items())
+    ]
+
+    return StreamingSummaryResponse(
+        total_events=total_events,
+        total_payment_amount=round(
+            total_payment_amount,
+            2,
+        ),
+        unique_departments=unique_departments,
+        unique_suppliers=unique_suppliers,
+        minimum_fiscal_year=minimum_fiscal_year,
+        maximum_fiscal_year=maximum_fiscal_year,
+        events_by_fiscal_year=events_by_fiscal_year,
+        events_by_dedup_status=events_by_dedup_status,
+    )
+
 
 def get_streaming_department_summary(
     *,
