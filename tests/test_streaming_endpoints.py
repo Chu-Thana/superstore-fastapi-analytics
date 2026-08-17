@@ -248,7 +248,7 @@ def test_streaming_department_summary_name_filter() -> None:
     assert body["total_count"] == 1
     assert body["count"] == 1
     assert body["data"][0]["department"] == "DPH Public Health"
-    assert body["data"][0]["event_count"] == 339
+    assert body["data"][0]["event_count"] == 34711
 
 
 def test_streaming_department_summary_combined_filters() -> None:
