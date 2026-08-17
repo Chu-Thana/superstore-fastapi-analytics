@@ -63,8 +63,13 @@ STREAMING_CURATED_S3_KEY = (
 )
 
 STREAMING_SUMMARY_S3_KEY = (
-    f"{S3_PREFIX}/streaming/reports/"
-    "streaming_summary_report.json"
+    f"{S3_PREFIX}/streaming/analytics/"
+    "vendor_payments_streaming_summary.json"
+)
+
+STREAMING_DEPARTMENT_SUMMARY_S3_KEY = (
+    f"{S3_PREFIX}/streaming/analytics/"
+    "vendor_payments_streaming_department_summary.json"
 )
 
 API_CACHE_TTL_SECONDS = float(

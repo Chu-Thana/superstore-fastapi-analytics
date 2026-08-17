@@ -11,6 +11,7 @@ from app.models.streaming import (
 )
 
 from app.repositories.streaming_repository import (
+    read_streaming_department_summary,
     read_streaming_events,
     read_streaming_summary,
 )
@@ -80,6 +81,7 @@ def get_streaming_events(
         data=items,
     )
 
+
 def get_streaming_summary() -> StreamingSummaryResponse:
     summary = read_streaming_summary()
 
@@ -94,14 +96,44 @@ def get_streaming_department_summary(
     offset: int = 0,
 ) -> StreamingDepartmentSummaryResponse:
 
+    if fiscal_year is None:
+        summary = read_streaming_department_summary()
+
+        raw_items = summary.get("data", [])
+
+        if department:
+            department_query = department.casefold()
+
+            raw_items = [
+                item
+                for item in raw_items
+                if department_query
+                in str(item["department"]).casefold()
+            ]
+
+        items = [
+            StreamingDepartmentSummaryItem(**item)
+            for item in raw_items
+        ]
+
+        total_count = len(items)
+        paginated_items = items[offset : offset + limit]
+
+        return StreamingDepartmentSummaryResponse(
+            total_count=total_count,
+            count=len(paginated_items),
+            limit=limit,
+            offset=offset,
+            data=paginated_items,
+        )
+
     events = read_streaming_events()
 
-    if fiscal_year is not None:
-        events = [
-            event
-            for event in events
-            if event["fiscal_year"] == fiscal_year
-        ]
+    events = [
+        event
+        for event in events
+        if event["fiscal_year"] == fiscal_year
+    ]
 
     if department:
         department_query = department.casefold()
@@ -113,7 +145,10 @@ def get_streaming_department_summary(
             in str(event["department"]).casefold()
         ]
 
-    grouped_events: dict[str, list[dict[str, object]]] = {}
+    grouped_events: dict[
+        str,
+        list[dict[str, object]],
+    ] = {}
 
     for event in events:
         department_name = str(event["department"])
@@ -168,6 +203,7 @@ def get_streaming_department_summary(
         offset=offset,
         data=paginated_items,
     )
+
 
 def get_streaming_supplier_summary(
     *,
@@ -250,3 +286,4 @@ def get_streaming_supplier_summary(
         offset=offset,
         data=paginated_items,
     )
+

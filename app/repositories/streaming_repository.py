@@ -10,6 +10,7 @@ from app.config import (
     AWS_REGION,
     S3_BUCKET,
     STREAMING_CURATED_S3_KEY,
+    STREAMING_DEPARTMENT_SUMMARY_S3_KEY,
     STREAMING_SUMMARY_S3_KEY,
 )
 
@@ -109,5 +110,11 @@ def read_streaming_events() -> list[dict[str, Any]]:
 def read_streaming_summary() -> dict[str, Any]:
     return read_json_object_from_s3(
         STREAMING_SUMMARY_S3_KEY
+    )
+
+
+def read_streaming_department_summary() -> dict[str, Any]:
+    return read_json_object_from_s3(
+        STREAMING_DEPARTMENT_SUMMARY_S3_KEY
     )
 
