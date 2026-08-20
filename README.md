@@ -1,75 +1,113 @@
 # 🚀 Vendor Payments API Serving
 
-![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)
+![AWS S3](https://img.shields.io/badge/Data%20Source-AWS%20S3-FF9900?logo=amazons3&logoColor=white)
 ![Cache](https://img.shields.io/badge/Cache-In--Memory-orange)
-![Cache Strategy](https://img.shields.io/badge/Cache-HIT%2FMISS-critical)
 ![Testing](https://img.shields.io/badge/Testing-57%20Passed-0A9EDC?logo=pytest&logoColor=white)
 ![Code Quality](https://img.shields.io/badge/Code%20Quality-Ruff-8A2BE2)
 ![Docker](https://img.shields.io/badge/Container-Docker-2496ED?logo=docker&logoColor=white)
-![CI](https://github.com/Chu-Thana/vendor-payments-api-serving/actions/workflows/ci.yml/badge.svg)
+![CI/CD](https://github.com/Chu-Thana/vendor-payments-api-serving/actions/workflows/ci.yml/badge.svg)
+![Deployment](https://img.shields.io/badge/Deployment-Render-46E3B7?logo=render&logoColor=black)
 ![Architecture](https://img.shields.io/badge/Architecture-Layered-darkblue)
-![Use Case](https://img.shields.io/badge/Use%20Case-BI%20%26%20Web-success)
 
-FastAPI serving layer for trusted Vendor Payments batch and streaming analytics data.
+FastAPI serving layer for trusted Vendor Payments batch and streaming analytics data stored in AWS S3.
 
-This project is part of the **Vendor Payments Data Engineering Portfolio** and acts as the API bridge between analytics-ready outputs and downstream consumers such as Power BI, web dashboards, and external applications.
+This project is **Project 2** of the Vendor Payments Data Engineering Portfolio. It exposes analytics-ready Batch and Streaming outputs through validated REST endpoints, adds request observability and cache-aware response handling, and deploys the API to Render through a gated GitHub Actions CI/CD pipeline.
+
+**Live API:** https://vendor-payments-api-render.onrender.com<br>
+**Swagger UI:** https://vendor-payments-api-render.onrender.com/docs<br>
+**Analytics Web App:** https://vendor-payments-analytics.vercel.app/
 
 ---
 
 ## 📌 Project Summary
 
-The application exposes processed Batch and Streaming data through validated REST endpoints instead of requiring consumers to read CSV or JSONL files directly.
+The API acts as the serving bridge between analytics-ready data in AWS S3 and downstream consumers such as the React analytics dashboard and external API clients.
 
-It demonstrates:
+Instead of requiring consumers to read CSV or JSONL artifacts directly, the application provides consistent JSON contracts through FastAPI.
 
-- Layered API architecture
-- Batch and Streaming analytics endpoints
+The project demonstrates:
+
+- S3-backed analytics serving
+- Layered FastAPI architecture
+- Batch and Streaming REST endpoints
 - Pydantic request and response contracts
+- Query filtering and pagination
 - Request observability middleware
 - In-memory cache-aside behavior
 - Query-aware cache keys and TTL expiration
-- Automated testing, linting, Docker validation, and GitHub Actions CI
+- Automated validation with Ruff and Pytest
+- Docker container validation
+- Gated CI/CD with GitHub Actions and Render Deploy Hooks
+- Production health checks through `/health`
 
 ---
 
 ## 🧭 Architecture
 
-![Vendor Payments API Layered Architecture](assets/vendor-payments-api/architecture/00_vendor-payments-api-serving-architec.png)
+![Vendor Payments API Serving Architecture](assets/vendor-payments-api/architecture/00_api-serving-architecture.png)
 
-The request lifecycle follows this path:
+The application is organized into two major concerns:
+
+### FastAPI Serving Layer
 
 ```text
-Analytics Consumer
-→ Middleware
-→ FastAPI Endpoint
-→ Cache Lookup
-
-Cache HIT
-→ Return cached response
-
-Cache MISS
-→ Service
-→ Repository
-→ Analytics Data Source
-→ Store successful result in cache
-→ Return validated JSON response
+Analytics Consumers
+        ⇅
+FastAPI Serving Layer
+        ⇅
+AWS S3
 ```
+
+Within the FastAPI application:
+
+Endpoint Layer
+→ Cache Layer
+→ Service Layer
+→ Repository Layer
+
+Analytics consumers send requests to FastAPI and receive validated JSON responses. On a cache MISS, the request continues through the service and repository layers, where the API retrieves trusted Batch and Streaming analytics outputs from AWS S3.
+
+### CI/CD Deployment Layer
+
+```text
+Push to main
+↓
+GitHub Actions
+↓
+Ruff + Pytest
+↓
+Docker Build
+↓
+Render Deploy Hook
+↓
+Render Deployment
+↓
+/health
+↓
+Live API
+```
+
+Production deployment is triggered only after CI validation and container build succeed.
 
 ### Layer Responsibilities
 
-- **Analytics Consumption Layer** — Power BI, web dashboards, external applications, and API clients
-- **Middleware Layer** — Request ID, timing, structured request logs, and structured error logs
-- **FastAPI Endpoint Layer** — Routing, query validation, response schemas, and error handling
-- **Cache Layer** — Cache HIT/MISS, query-aware keys, and TTL-based expiration
-- **Service Layer** — Filtering, aggregation, sorting, pagination, and summary metrics
-- **Repository Layer** — CSV and JSONL access, parsing, and value normalization
-- **Analytics Data Sources** — Trusted Batch Gold marts and validated Streaming events
-- **API Contracts & Quality Assurance** — Pydantic, OpenAPI, Pytest, Ruff, Docker, and GitHub Actions
+- **AWS S3** — Stores trusted Batch Gold outputs and curated Streaming analytics outputs.
+- **Endpoint Layer** — Handles routing, query validation, response schemas, and HTTP error handling.
+- **Cache Layer** — Implements in-memory cache-aside behavior with normalized cache keys and TTL-based expiration.
+- **Service Layer** — Applies filtering, aggregation, pagination, sorting, and summary calculations.
+- **Repository Layer** — Reads analytics outputs from S3 and parses / normalizes records for the service layer.
+- **Analytics Consumers** — React analytics dashboard, external API clients, and Swagger/OpenAPI users.
+- **CI/CD Deployment Layer** — Validates code, tests API behavior, verifies Docker build readiness, and gates production deployment to Render.
 
 ---
 
-## ✨ Current Features
+## ✨ API Surface
+
+The API exposes health, metadata, Batch analytics, and Streaming analytics endpoints.
+
+![Swagger API Endpoints](assets/vendor-payments-api/evidence/01_swagger-api-endpoints.png)
 
 ### Core APIs
 
@@ -102,40 +140,40 @@ Supported capabilities include:
 
 - Fiscal year filtering
 - Department and supplier filtering
-- Fund type and fund category filtering
-- Deduplication status filtering
+- Fund category filtering
+- Deduplication-status filtering
 - Combined query filters
-- Limit and offset pagination
+- Limit / offset pagination
 - Pydantic response models
-- Swagger/OpenAPI documentation
+- Swagger / OpenAPI documentation
 
 ---
 
-## 🔎 Runtime Capabilities
+## ☁️ S3-Backed Data Access
 
-The metadata endpoint reports the capabilities currently enabled by the API.
+The current API no longer depends on local analytics files for production serving.
 
-```json
-{
-  "service": "Vendor Payments API",
-  "version": "1.0.0",
-  "batch_data_available": true,
-  "streaming_data_available": true,
-  "middleware_enabled": true,
-  "request_id_enabled": true,
-  "request_timing_enabled": true,
-  "structured_logging_enabled": true,
-  "cache_enabled": true
-}
+Repository functions read trusted analytics outputs from AWS S3 and pass normalized records to the service layer.
+
+```text
+AWS S3
+  ↓
+Repository
+  ↓
+Service
+  ↓
+Endpoint
+  ↓
+Validated JSON Response
 ```
 
-![API Runtime Capabilities](assets/vendor-payments-api/evidence/04_api-runtime-capabilities.png)
+This keeps storage concerns isolated from API routing and business logic while allowing the React analytics application to consume cloud-backed data through a stable HTTP interface.
 
 ---
 
 ## 🧠 Middleware Observability
 
-Every request passes through the observability middleware before reaching the endpoint layer.
+Every request passes through observability middleware before reaching the endpoint layer.
 
 The middleware provides:
 
@@ -152,12 +190,7 @@ X-Request-ID
 X-Process-Time-MS
 ```
 
-Example:
-
-```text
-X-Request-ID: c31a25fa-e360-411d-9415-c6588feb3d7c
-X-Process-Time-MS: 0.51
-```
+These headers make it easier to trace individual requests and inspect API latency during development and troubleshooting.
 
 ---
 
@@ -168,14 +201,14 @@ The API uses an **in-memory cache-aside strategy** for Batch and Streaming analy
 ### Cache Behavior
 
 - Cache backend: In-memory Python cache
-- Default TTL: 60 seconds
 - Cache key: Endpoint namespace plus normalized query parameters
 - Cache HIT: Return the cached response
-- Cache MISS: Call the service, store the successful result, and return the response
-- Invalid requests: Not cached
-- Server errors: Not cached
+- Cache MISS: Call the service, cache the successful result, and return the response
+- TTL-based expiration
+- Invalid requests are not cached
+- Server errors are not cached
 
-Cached endpoints include:
+Cached responses expose:
 
 ```text
 X-Cache-Status: MISS
@@ -187,45 +220,11 @@ or:
 X-Cache-Status: HIT
 ```
 
-![Observability and Cache Headers](assets/vendor-payments-api/evidence/03_observability-cache-headers.png)
+![Cache MISS and HIT](assets/vendor-payments-api/evidence/02_cache-miss-hit.png)
 
-### Cache Performance Benchmark
+Local validation of the Streaming Summary endpoint reduced repeated-request processing time from 184.59 ms on a cache MISS to 0.69 ms on a cache HIT, approximately 268× faster, while returning the same analytics result.
 
-A repeated request to the Streaming Summary endpoint demonstrates the impact of the cache-aside strategy:
-
-```text
-Endpoint: GET /api/v1/streaming/summary
-Records summarized: 100,000 streaming events
-
-Cache MISS: 7,076.46 ms
-Cache HIT: 0.58 ms
-Latency reduction: 99.99%
-Cached response: approximately 12,200× faster
-```
-
-The first request reads and aggregates the streaming dataset before storing the validated response in the in-memory cache. An identical request made within the configured TTL is served directly from the cache.
-
-The current cache is process-local and is cleared when the API restarts. Redis-backed shared caching remains a planned production improvement.
-
----
-
-## 📊 Batch Analytics Evidence
-
-The Batch APIs serve trusted Gold mart outputs generated by the Vendor Payments ETL pipeline.
-
-Example: filtered fund category summary for `General Fund` and `Operating`.
-
-![Batch Fund Category Summary Response](assets/vendor-payments-api/batch/10_batch-fund-category-summary-response.png)
-
----
-
-## 🌊 Streaming Analytics Evidence
-
-The Streaming APIs expose validated event-level data and dashboard-ready summaries.
-
-Example: accepted streaming payment events filtered by fiscal year.
-
-![Streaming Events Response](assets/vendor-payments-api/streaming/13_streaming-events-response-with-cache-headers.png)
+The current cache is process-local and is cleared when the API process restarts. A shared Redis-backed cache remains a possible production-scale improvement.
 
 ---
 
@@ -234,26 +233,28 @@ Example: accepted streaming payment events filtered by fiscal year.
 The project is validated locally with Ruff and Pytest.
 
 ```powershell
-python -m ruff check .
-python -m pytest
+python -m ruff check app tests
+python -m pytest -v
 ```
 
-Current result:
+Current test result:
 
 ```text
-Ruff passed
-57 tests passed
+57 passed
 ```
 
-![Local Validation](assets/vendor-payments-api/evidence/01_api-local-validation-57-tests.png)
+![API Local Validation](assets/vendor-payments-api/evidence/03_api-local-validation-57-tests.png)
 
 Validation covers:
 
 - Root, health, and metadata endpoints
-- Batch and Streaming API responses
-- Filters and combined filters
-- Pagination and invalid pagination requests
-- Request ID and timing headers
+- Batch endpoint responses
+- Streaming endpoint responses
+- Fiscal-year and name filters
+- Combined filters
+- Pagination and invalid pagination
+- Request ID behavior
+- Processing-time headers
 - Structured request and error logging
 - In-memory cache storage and retrieval
 - TTL expiration
@@ -264,18 +265,91 @@ Validation covers:
 
 ---
 
-## ⚙️ Continuous Integration
+## ⚙️ CI/CD Pipeline
 
-GitHub Actions runs automatically on changes to the repository.
+GitHub Actions runs automated checks whenever configured repository events occur.
+
+For production deployment, the pipeline is gated so that deployment to Render happens only after CI succeeds.
 
 ```text
 Ruff and Pytest
-→ Docker image build
+      ↓
+Docker Build
+      ↓
+Deploy to Render
 ```
 
-![GitHub Actions CI](assets/vendor-payments-api/evidence/02_api-ci-validation-passed.png)
+![GitHub Actions CI/CD Pipeline](assets/vendor-payments-api/evidence/04_ci-cd-pipeline-passed.png)
 
-The CI workflow acts as a quality gate by checking code quality, API behavior, and container build readiness.
+### CI Quality Gates
+
+1. **Ruff and Pytest**
+   - Checks Python code quality
+   - Runs the automated API test suite
+
+2. **Docker Build**
+   - Runs only after the test job succeeds
+   - Verifies that the application can be packaged from the repository Dockerfile
+
+3. **Deploy to Render**
+   - Runs only after the Docker build succeeds
+   - Runs only for a `push` to `main`
+   - Uses a private Render Deploy Hook stored as a GitHub Actions repository secret
+
+The deploy hook value is not hardcoded in the workflow.
+
+```yaml
+env:
+  RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+```
+
+Render Auto-Deploy is disabled, so production deployment is controlled by the GitHub Actions quality gate instead of starting independently on every commit.
+
+---
+
+## 🚀 Production Deployment
+
+The API is deployed as a Docker-based Render Web Service.
+
+Render:
+
+- Pulls the repository source
+- Builds the application from `./Dockerfile`
+- Starts the FastAPI service with Uvicorn
+- Checks `/health`
+- Marks the service live after the deployment succeeds
+
+![Render Deploy Hook Live](assets/vendor-payments-api/evidence/05_render-deploy-hook-live.png)
+
+The deployment evidence shows:
+
+```text
+Trigger: Deploy Hook
+Status: Deploy succeeded | Live
+Health check: GET /health → 200 OK
+```
+
+This provides an explicit deployment path from validated source code to a healthy production API.
+
+---
+
+## 🐳 Docker Runtime
+
+The Dockerfile packages the FastAPI application with a slim Python image and starts the API through Uvicorn.
+
+```text
+Dockerfile
+  ↓
+Install Python dependencies
+  ↓
+Copy application source
+  ↓
+Start Uvicorn
+  ↓
+Expose FastAPI service
+```
+
+The GitHub Actions pipeline validates Docker build readiness before triggering the Render deployment.
 
 ---
 
@@ -283,6 +357,10 @@ The CI workflow acts as a quality gate by checking code quality, API behavior, a
 
 ```text
 vendor-payments-api-serving/
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 │
 ├── app/
 │   ├── api/
@@ -307,13 +385,13 @@ vendor-payments-api-serving/
 ├── assets/
 │   └── vendor-payments-api/
 │       ├── architecture/
-│       ├── batch/
-│       ├── evidence/
-│       └── streaming/
-│
-├── data/
-│   ├── batch/
-│   └── streaming/
+│       │   └── 00_api-serving-architecture.png
+│       └── evidence/
+│           ├── 01_swagger-api-endpoints.png
+│           ├── 02_cache-miss-hit.png
+│           ├── 03_api-local-validation-57-tests.png
+│           ├── 04_ci-cd-pipeline-passed.png
+│           └── 05_render-deploy-hook-live.png
 │
 ├── tests/
 │   ├── test_batch_endpoints.py
@@ -353,7 +431,7 @@ Run the API:
 python -m uvicorn app.main:app --reload
 ```
 
-Open Swagger documentation:
+Open Swagger:
 
 ```text
 http://127.0.0.1:8000/docs
@@ -393,26 +471,30 @@ Project 4 — Airflow Orchestration
 Project 5 — Cloud Data Platform
 ```
 
-Project 2 transforms trusted Batch and Streaming analytics outputs into consistent, validated, observable, and cache-aware JSON responses for downstream consumers.
+Project 2 converts trusted Batch and Streaming analytics outputs in AWS S3 into consistent, validated, observable, cache-aware JSON responses for downstream applications.
+
+It provides the serving boundary between the data platform and the React analytics layer.
 
 ---
 
-## 🛣️ Planned Development
+## 🛣️ Planned Improvements
 
-- Redis-backed shared cache
+Potential future improvements include:
+
+- Redis-backed shared caching
 - Cache invalidation and administration controls
-- Power BI integration
-- Browser-based web dashboard
-- Cloud-backed data source integration
 - Authentication and authorization
 - Rate limiting
-- Production deployment
 - Centralized monitoring and observability
+- More explicit deployment-status verification from CI/CD
+- Dynamic handling of rotated Streaming S3 object keys
 
 ---
 
 ## 🎯 Key Takeaway
 
-This project is not only a collection of API endpoints.
+This project is more than a collection of API endpoints.
 
-It demonstrates how a layered analytics serving application can expose trusted data through validated contracts, request observability, cache-aware response handling, automated quality checks, and consumer-ready interfaces.
+It demonstrates how a layered serving application can expose trusted cloud-backed analytics data through validated REST contracts, request observability, cache-aware response handling, automated testing, Docker validation, and gated CI/CD deployment.
+
+The resulting API provides a stable interface between the Vendor Payments data platform and downstream analytics applications.
