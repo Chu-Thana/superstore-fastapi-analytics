@@ -13,7 +13,7 @@
 
 FastAPI serving layer for trusted Vendor Payments batch and streaming analytics data stored in AWS S3.
 
-This project is **Project 2** of the Vendor Payments Data Engineering Portfolio. It exposes analytics-ready Batch and Streaming outputs through validated REST endpoints, adds request observability and cache-aware response handling, and deploys the API to Render through a gated GitHub Actions CI/CD pipeline.
+This repository is the API Serving layer of the Vendor Payments Data Engineering Portfolio. It exposes analytics-ready Batch and Streaming outputs through validated REST endpoints, adds request observability and cache-aware response handling, and deploys the API to Render through a gated GitHub Actions CI/CD pipeline.
 
 **Live API:** https://vendor-payments-api-render.onrender.com<br>
 **Swagger UI:** https://vendor-payments-api-render.onrender.com/docs<br>
@@ -464,14 +464,26 @@ docker compose down
 ## 🔗 Role in the Vendor Payments Data Platform
 
 ```text
-Project 1 — Batch ETL Pipeline
-Project 2 — API Serving Layer
-Project 3 — Kafka Streaming Pipeline
-Project 4 — Airflow Orchestration
-Project 5 — Cloud Data Platform
+vendor-payments-etl-analytics
+→ Batch ETL and analytics processing
+
+vendor-payments-streaming-pipeline
+→ Kafka event ingestion, validation, and deduplication
+
+vendor-payments-airflow-orchestration
+→ Workflow orchestration and cross-platform validation
+
+vendor-payments-cloud-data-platform
+→ Amazon S3, Athena, and Redshift analytics platform
+
+vendor-payments-api-serving
+→ FastAPI serving layer for trusted analytics
+
+vendor-payments-analytics
+→ React and analytics consumption layer
 ```
 
-Project 2 converts trusted Batch and Streaming analytics outputs in AWS S3 into consistent, validated, observable, cache-aware JSON responses for downstream applications.
+The API Serving Layer converts trusted Batch and Streaming analytics outputs in AWS S3 into consistent, validated, observable, cache-aware JSON responses for downstream applications.
 
 It provides the serving boundary between the data platform and the React analytics layer.
 
