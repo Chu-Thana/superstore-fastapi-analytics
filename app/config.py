@@ -57,19 +57,8 @@ FUND_CATEGORY_SUMMARY_S3_KEY = build_batch_gold_s3_key(
     "mart_fund_category_summary.csv"
 )
 
-STREAMING_CURATED_S3_KEY = (
-    f"{S3_PREFIX}/streaming/curated/"
-    "vendor_payments_streaming_events.csv"
-)
-
-STREAMING_SUMMARY_S3_KEY = (
-    f"{S3_PREFIX}/streaming/analytics/"
-    "vendor_payments_streaming_summary.json"
-)
-
-STREAMING_DEPARTMENT_SUMMARY_S3_KEY = (
-    f"{S3_PREFIX}/streaming/analytics/"
-    "vendor_payments_streaming_department_summary.json"
+STREAMING_LATEST_S3_KEY = (
+    f"{S3_PREFIX}/streaming/curated/latest.json"
 )
 
 API_CACHE_TTL_SECONDS = float(

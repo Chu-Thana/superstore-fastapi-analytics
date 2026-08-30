@@ -9,9 +9,7 @@ from botocore.exceptions import ClientError
 from app.config import (
     AWS_REGION,
     S3_BUCKET,
-    STREAMING_CURATED_S3_KEY,
-    STREAMING_DEPARTMENT_SUMMARY_S3_KEY,
-    STREAMING_SUMMARY_S3_KEY,
+    STREAMING_LATEST_S3_KEY,
 )
 
 
@@ -81,9 +79,42 @@ def read_json_object_from_s3(
     return content
 
 
+def read_streaming_latest_pointer() -> dict[str, Any]:
+    pointer = read_json_object_from_s3(
+        STREAMING_LATEST_S3_KEY
+    )
+
+    window_id = pointer.get("window_id")
+    status = pointer.get("status")
+    events_s3_key = pointer.get("events_s3_key")
+
+    if not isinstance(window_id, str) or not window_id:
+        raise ValueError(
+            "Streaming latest pointer is missing window_id."
+        )
+
+    if status != "completed":
+        raise ValueError(
+            "Streaming latest pointer is not completed: "
+            f"{status!r}"
+        )
+
+    if (
+        not isinstance(events_s3_key, str)
+        or not events_s3_key
+    ):
+        raise ValueError(
+            "Streaming latest pointer is missing events_s3_key."
+        )
+
+    return pointer
+
+
 def read_streaming_events() -> list[dict[str, Any]]:
+    pointer = read_streaming_latest_pointer()
+
     rows = read_csv_rows_from_s3(
-        STREAMING_CURATED_S3_KEY
+        pointer["events_s3_key"]
     )
 
     events: list[dict[str, Any]] = []
@@ -106,15 +137,3 @@ def read_streaming_events() -> list[dict[str, Any]]:
         )
 
     return events
-
-def read_streaming_summary() -> dict[str, Any]:
-    return read_json_object_from_s3(
-        STREAMING_SUMMARY_S3_KEY
-    )
-
-
-def read_streaming_department_summary() -> dict[str, Any]:
-    return read_json_object_from_s3(
-        STREAMING_DEPARTMENT_SUMMARY_S3_KEY
-    )
-

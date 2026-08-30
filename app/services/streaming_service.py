@@ -8,12 +8,12 @@ from app.models.streaming import (
     StreamingSummaryResponse,
     StreamingSupplierSummaryItem,
     StreamingSupplierSummaryResponse,
+    StreamingDedupCount,
+    StreamingYearCount,
 )
 
 from app.repositories.streaming_repository import (
-    read_streaming_department_summary,
     read_streaming_events,
-    read_streaming_summary,
 )
 
 
@@ -83,9 +83,93 @@ def get_streaming_events(
 
 
 def get_streaming_summary() -> StreamingSummaryResponse:
-    summary = read_streaming_summary()
+    events = read_streaming_events()
 
-    return StreamingSummaryResponse(**summary)
+    if not events:
+        raise ValueError(
+            "Streaming events are empty."
+        )
+
+    fiscal_year_counts: dict[int, int] = {}
+    dedup_status_counts: dict[str, int] = {}
+
+    for event in events:
+        fiscal_year = int(
+            event["fiscal_year"]
+        )
+        dedup_status = str(
+            event["dedup_status"]
+        )
+
+        fiscal_year_counts[fiscal_year] = (
+            fiscal_year_counts.get(
+                fiscal_year,
+                0,
+            )
+            + 1
+        )
+
+        dedup_status_counts[dedup_status] = (
+            dedup_status_counts.get(
+                dedup_status,
+                0,
+            )
+            + 1
+        )
+
+    fiscal_years = [
+        int(event["fiscal_year"])
+        for event in events
+    ]
+
+    return StreamingSummaryResponse(
+        total_events=len(events),
+        total_payment_amount=round(
+            sum(
+                float(event["payment_amount"])
+                for event in events
+            ),
+            2,
+        ),
+        unique_departments=len(
+            {
+                str(event["department"])
+                for event in events
+            }
+        ),
+        unique_suppliers=len(
+            {
+                str(event["supplier_name"])
+                for event in events
+            }
+        ),
+        minimum_fiscal_year=min(
+            fiscal_years
+        ),
+        maximum_fiscal_year=max(
+            fiscal_years
+        ),
+        events_by_fiscal_year=[
+            StreamingYearCount(
+                fiscal_year=fiscal_year,
+                event_count=event_count,
+            )
+            for fiscal_year, event_count
+            in sorted(
+                fiscal_year_counts.items()
+            )
+        ],
+        events_by_dedup_status=[
+            StreamingDedupCount(
+                dedup_status=dedup_status,
+                event_count=event_count,
+            )
+            for dedup_status, event_count
+            in sorted(
+                dedup_status_counts.items()
+            )
+        ],
+    )
 
 
 def get_streaming_department_summary(
@@ -96,44 +180,14 @@ def get_streaming_department_summary(
     offset: int = 0,
 ) -> StreamingDepartmentSummaryResponse:
 
-    if fiscal_year is None:
-        summary = read_streaming_department_summary()
-
-        raw_items = summary.get("data", [])
-
-        if department:
-            department_query = department.casefold()
-
-            raw_items = [
-                item
-                for item in raw_items
-                if department_query
-                in str(item["department"]).casefold()
-            ]
-
-        items = [
-            StreamingDepartmentSummaryItem(**item)
-            for item in raw_items
-        ]
-
-        total_count = len(items)
-        paginated_items = items[offset : offset + limit]
-
-        return StreamingDepartmentSummaryResponse(
-            total_count=total_count,
-            count=len(paginated_items),
-            limit=limit,
-            offset=offset,
-            data=paginated_items,
-        )
-
     events = read_streaming_events()
 
-    events = [
-        event
-        for event in events
-        if event["fiscal_year"] == fiscal_year
-    ]
+    if fiscal_year is not None:
+        events = [
+            event
+            for event in events
+            if event["fiscal_year"] == fiscal_year
+        ]
 
     if department:
         department_query = department.casefold()

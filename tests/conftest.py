@@ -98,44 +98,13 @@ def load_streaming_events() -> list[dict[str, object]]:
     return events
 
 
-def load_json_file(
-    filename: str,
-) -> dict[str, object]:
-    file_path = STREAMING_DATA_DIR / filename
-
-    with file_path.open(
-        "r",
-        encoding="utf-8",
-    ) as file:
-        return json.load(file)
-
-
 @pytest.fixture(autouse=True)
 def mock_streaming_repository(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     events = load_streaming_events()
 
-    summary = load_json_file(
-        "vendor_payments_streaming_summary.json"
-    )
-
-    department_summary = load_json_file(
-        "vendor_payments_streaming_department_summary.json"
-    )
-
     monkeypatch.setattr(
         "app.services.streaming_service.read_streaming_events",
         lambda: events,
-    )
-
-    monkeypatch.setattr(
-        "app.services.streaming_service.read_streaming_summary",
-        lambda: summary,
-    )
-
-    monkeypatch.setattr(
-        "app.services.streaming_service."
-        "read_streaming_department_summary",
-        lambda: department_summary,
     )
