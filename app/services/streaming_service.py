@@ -26,51 +26,66 @@ def get_streaming_events(
     limit: int = 100,
     offset: int = 0,
 ) -> StreamingEventsResponse:
-    events = read_streaming_events()
+    department_query = (
+        department.casefold()
+        if department
+        else None
+    )
 
-    if fiscal_year is not None:
-        events = [
-            event
-            for event in events
-            if event["fiscal_year"] == fiscal_year
-        ]
+    supplier_query = (
+        supplier_name.casefold()
+        if supplier_name
+        else None
+    )
 
-    if department:
-        department_query = department.casefold()
+    dedup_query = (
+        dedup_status.casefold()
+        if dedup_status
+        else None
+    )
 
-        events = [
-            event
-            for event in events
-            if department_query
-            in str(event["department"]).casefold()
-        ]
+    total_count = 0
+    selected_events: list[dict[str, object]] = []
 
-    if supplier_name:
-        supplier_query = supplier_name.casefold()
+    for event in read_streaming_events():
+        if (
+            fiscal_year is not None
+            and event["fiscal_year"] != fiscal_year
+        ):
+            continue
 
-        events = [
-            event
-            for event in events
-            if supplier_query
-            in str(event["supplier_name"]).casefold()
-        ]
+        if (
+            department_query
+            and department_query
+            not in str(event["department"]).casefold()
+        ):
+            continue
 
-    if dedup_status:
-        dedup_query = dedup_status.casefold()
+        if (
+            supplier_query
+            and supplier_query
+            not in str(event["supplier_name"]).casefold()
+        ):
+            continue
 
-        events = [
-            event
-            for event in events
-            if str(event["dedup_status"]).casefold()
-            == dedup_query
-        ]
+        if (
+            dedup_query
+            and str(event["dedup_status"]).casefold()
+            != dedup_query
+        ):
+            continue
 
-    total_count = len(events)
-    paginated_events = events[offset : offset + limit]
+        if (
+            total_count >= offset
+            and len(selected_events) < limit
+        ):
+            selected_events.append(event)
+
+        total_count += 1
 
     items = [
         StreamingEventItem(**event)
-        for event in paginated_events
+        for event in selected_events
     ]
 
     return StreamingEventsResponse(
@@ -83,23 +98,32 @@ def get_streaming_events(
 
 
 def get_streaming_summary() -> StreamingSummaryResponse:
-    events = read_streaming_events()
+    total_events = 0
+    total_payment_amount = 0.0
 
-    if not events:
-        raise ValueError(
-            "Streaming events are empty."
-        )
+    departments: set[str] = set()
+    suppliers: set[str] = set()
 
     fiscal_year_counts: dict[int, int] = {}
     dedup_status_counts: dict[str, int] = {}
 
-    for event in events:
-        fiscal_year = int(
-            event["fiscal_year"]
+    minimum_fiscal_year: int | None = None
+    maximum_fiscal_year: int | None = None
+
+    for event in read_streaming_events():
+        total_events += 1
+
+        fiscal_year = int(event["fiscal_year"])
+        department = str(event["department"])
+        supplier_name = str(event["supplier_name"])
+        dedup_status = str(event["dedup_status"])
+
+        total_payment_amount += float(
+            event["payment_amount"]
         )
-        dedup_status = str(
-            event["dedup_status"]
-        )
+
+        departments.add(department)
+        suppliers.add(supplier_name)
 
         fiscal_year_counts[fiscal_year] = (
             fiscal_year_counts.get(
@@ -117,38 +141,37 @@ def get_streaming_summary() -> StreamingSummaryResponse:
             + 1
         )
 
-    fiscal_years = [
-        int(event["fiscal_year"])
-        for event in events
-    ]
+        if (
+            minimum_fiscal_year is None
+            or fiscal_year < minimum_fiscal_year
+        ):
+            minimum_fiscal_year = fiscal_year
+
+        if (
+            maximum_fiscal_year is None
+            or fiscal_year > maximum_fiscal_year
+        ):
+            maximum_fiscal_year = fiscal_year
+
+    if (
+        total_events == 0
+        or minimum_fiscal_year is None
+        or maximum_fiscal_year is None
+    ):
+        raise ValueError(
+            "Streaming events are empty."
+        )
 
     return StreamingSummaryResponse(
-        total_events=len(events),
+        total_events=total_events,
         total_payment_amount=round(
-            sum(
-                float(event["payment_amount"])
-                for event in events
-            ),
+            total_payment_amount,
             2,
         ),
-        unique_departments=len(
-            {
-                str(event["department"])
-                for event in events
-            }
-        ),
-        unique_suppliers=len(
-            {
-                str(event["supplier_name"])
-                for event in events
-            }
-        ),
-        minimum_fiscal_year=min(
-            fiscal_years
-        ),
-        maximum_fiscal_year=max(
-            fiscal_years
-        ),
+        unique_departments=len(departments),
+        unique_suppliers=len(suppliers),
+        minimum_fiscal_year=minimum_fiscal_year,
+        maximum_fiscal_year=maximum_fiscal_year,
         events_by_fiscal_year=[
             StreamingYearCount(
                 fiscal_year=fiscal_year,
@@ -179,66 +202,104 @@ def get_streaming_department_summary(
     limit: int = 100,
     offset: int = 0,
 ) -> StreamingDepartmentSummaryResponse:
+    department_query = (
+        department.casefold()
+        if department
+        else None
+    )
 
-    events = read_streaming_events()
+    grouped: dict[str, dict[str, object]] = {}
 
-    if fiscal_year is not None:
-        events = [
-            event
-            for event in events
-            if event["fiscal_year"] == fiscal_year
-        ]
+    for event in read_streaming_events():
+        if (
+            fiscal_year is not None
+            and event["fiscal_year"] != fiscal_year
+        ):
+            continue
 
-    if department:
-        department_query = department.casefold()
+        department_name = str(
+            event["department"]
+        )
 
-        events = [
-            event
-            for event in events
-            if department_query
-            in str(event["department"]).casefold()
-        ]
+        if (
+            department_query
+            and department_query
+            not in department_name.casefold()
+        ):
+            continue
 
-    grouped_events: dict[
-        str,
-        list[dict[str, object]],
-    ] = {}
+        event_fiscal_year = int(
+            event["fiscal_year"]
+        )
 
-    for event in events:
-        department_name = str(event["department"])
-
-        grouped_events.setdefault(
+        stats = grouped.setdefault(
             department_name,
-            [],
-        ).append(event)
+            {
+                "event_count": 0,
+                "total_payment_amount": 0.0,
+                "suppliers": set(),
+                "minimum_fiscal_year": event_fiscal_year,
+                "maximum_fiscal_year": event_fiscal_year,
+            },
+        )
+
+        stats["event_count"] = (
+            int(stats["event_count"])
+            + 1
+        )
+
+        stats["total_payment_amount"] = (
+            float(stats["total_payment_amount"])
+            + float(event["payment_amount"])
+        )
+
+        suppliers = stats["suppliers"]
+
+        if isinstance(suppliers, set):
+            suppliers.add(
+                str(event["supplier_name"])
+            )
+
+        stats["minimum_fiscal_year"] = min(
+            int(stats["minimum_fiscal_year"]),
+            event_fiscal_year,
+        )
+
+        stats["maximum_fiscal_year"] = max(
+            int(stats["maximum_fiscal_year"]),
+            event_fiscal_year,
+        )
 
     items = []
 
-    for department_name, department_events in grouped_events.items():
-        fiscal_years = [
-            int(event["fiscal_year"])
-            for event in department_events
-        ]
+    for department_name, stats in grouped.items():
+        suppliers = stats["suppliers"]
 
         items.append(
             StreamingDepartmentSummaryItem(
                 department=department_name,
-                event_count=len(department_events),
+                event_count=int(
+                    stats["event_count"]
+                ),
                 total_payment_amount=round(
-                    sum(
-                        float(event["payment_amount"])
-                        for event in department_events
+                    float(
+                        stats[
+                            "total_payment_amount"
+                        ]
                     ),
                     2,
                 ),
-                unique_suppliers=len(
-                    {
-                        str(event["supplier_name"])
-                        for event in department_events
-                    }
+                unique_suppliers=(
+                    len(suppliers)
+                    if isinstance(suppliers, set)
+                    else 0
                 ),
-                minimum_fiscal_year=min(fiscal_years),
-                maximum_fiscal_year=max(fiscal_years),
+                minimum_fiscal_year=int(
+                    stats["minimum_fiscal_year"]
+                ),
+                maximum_fiscal_year=int(
+                    stats["maximum_fiscal_year"]
+                ),
             )
         )
 
@@ -266,62 +327,104 @@ def get_streaming_supplier_summary(
     limit: int = 100,
     offset: int = 0,
 ) -> StreamingSupplierSummaryResponse:
-    events = read_streaming_events()
+    supplier_query = (
+        supplier_name.casefold()
+        if supplier_name
+        else None
+    )
 
-    if fiscal_year is not None:
-        events = [
-            event
-            for event in events
-            if event["fiscal_year"] == fiscal_year
-        ]
+    grouped: dict[str, dict[str, object]] = {}
 
-    if supplier_name:
-        supplier_query = supplier_name.casefold()
+    for event in read_streaming_events():
+        if (
+            fiscal_year is not None
+            and event["fiscal_year"] != fiscal_year
+        ):
+            continue
 
-        events = [
-            event
-            for event in events
-            if supplier_query
-            in str(event["supplier_name"]).casefold()
-        ]
+        current_supplier_name = str(
+            event["supplier_name"]
+        )
 
-    grouped_events: dict[str, list[dict[str, object]]] = {}
+        if (
+            supplier_query
+            and supplier_query
+            not in current_supplier_name.casefold()
+        ):
+            continue
 
-    for event in events:
-        current_supplier_name = str(event["supplier_name"])
+        event_fiscal_year = int(
+            event["fiscal_year"]
+        )
 
-        grouped_events.setdefault(
+        stats = grouped.setdefault(
             current_supplier_name,
-            [],
-        ).append(event)
+            {
+                "event_count": 0,
+                "total_payment_amount": 0.0,
+                "departments": set(),
+                "minimum_fiscal_year": event_fiscal_year,
+                "maximum_fiscal_year": event_fiscal_year,
+            },
+        )
+
+        stats["event_count"] = (
+            int(stats["event_count"])
+            + 1
+        )
+
+        stats["total_payment_amount"] = (
+            float(stats["total_payment_amount"])
+            + float(event["payment_amount"])
+        )
+
+        departments = stats["departments"]
+
+        if isinstance(departments, set):
+            departments.add(
+                str(event["department"])
+            )
+
+        stats["minimum_fiscal_year"] = min(
+            int(stats["minimum_fiscal_year"]),
+            event_fiscal_year,
+        )
+
+        stats["maximum_fiscal_year"] = max(
+            int(stats["maximum_fiscal_year"]),
+            event_fiscal_year,
+        )
 
     items = []
 
-    for current_supplier_name, supplier_events in grouped_events.items():
-        fiscal_years = [
-            int(event["fiscal_year"])
-            for event in supplier_events
-        ]
+    for current_supplier_name, stats in grouped.items():
+        departments = stats["departments"]
 
         items.append(
             StreamingSupplierSummaryItem(
                 supplier_name=current_supplier_name,
-                event_count=len(supplier_events),
+                event_count=int(
+                    stats["event_count"]
+                ),
                 total_payment_amount=round(
-                    sum(
-                        float(event["payment_amount"])
-                        for event in supplier_events
+                    float(
+                        stats[
+                            "total_payment_amount"
+                        ]
                     ),
                     2,
                 ),
-                unique_departments=len(
-                    {
-                        str(event["department"])
-                        for event in supplier_events
-                    }
+                unique_departments=(
+                    len(departments)
+                    if isinstance(departments, set)
+                    else 0
                 ),
-                minimum_fiscal_year=min(fiscal_years),
-                maximum_fiscal_year=max(fiscal_years),
+                minimum_fiscal_year=int(
+                    stats["minimum_fiscal_year"]
+                ),
+                maximum_fiscal_year=int(
+                    stats["maximum_fiscal_year"]
+                ),
             )
         )
 

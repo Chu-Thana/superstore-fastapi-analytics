@@ -39,20 +39,6 @@ def read_text_from_s3(
     )
 
 
-def read_csv_rows_from_s3(
-    s3_key: str,
-) -> list[dict[str, str]]:
-    csv_content = read_text_from_s3(
-        s3_key
-    )
-
-    reader = csv.DictReader(
-        io.StringIO(csv_content)
-    )
-
-    return list(reader)
-
-
 def read_json_object_from_s3(
     s3_key: str,
 ) -> dict[str, Any]:
@@ -110,18 +96,36 @@ def read_streaming_latest_pointer() -> dict[str, Any]:
     return pointer
 
 
-def read_streaming_events() -> list[dict[str, Any]]:
+def read_streaming_events():
     pointer = read_streaming_latest_pointer()
 
-    rows = read_csv_rows_from_s3(
-        pointer["events_s3_key"]
+    s3_client = boto3.client(
+        "s3",
+        region_name=AWS_REGION,
     )
 
-    events: list[dict[str, Any]] = []
+    try:
+        response = s3_client.get_object(
+            Bucket=S3_BUCKET,
+            Key=pointer["events_s3_key"],
+        )
+    except ClientError as exc:
+        raise FileNotFoundError(
+            "Streaming S3 object is unavailable: "
+            f"s3://{S3_BUCKET}/{pointer['events_s3_key']}"
+        ) from exc
 
-    for row in rows:
-        events.append(
-            {
+    body = response["Body"]
+
+    with io.TextIOWrapper(
+        body,
+        encoding="utf-8-sig",
+        newline="",
+    ) as text_stream:
+        reader = csv.DictReader(text_stream)
+
+        for row in reader:
+            yield {
                 "event_id": row["event_id"],
                 "event_type": row["event_type"],
                 "event_timestamp": row["event_timestamp"],
@@ -134,6 +138,3 @@ def read_streaming_events() -> list[dict[str, Any]]:
                 "dedup_status": row["dedup_status"],
                 "ingested_at": row["ingested_at"],
             }
-        )
-
-    return events
